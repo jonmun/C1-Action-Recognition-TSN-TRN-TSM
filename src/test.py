@@ -33,6 +33,11 @@ parser.add_argument(
     help="Overwrite data directory in checkpoint. Useful when testing a checkpoint "
     "trained on a different machine.",
 )
+parser.add_argument(
+    "--features",
+    action="store_true",
+    help="Save activations from the base model",
+)
 
 LOG = logging.getLogger("test")
 
@@ -57,7 +62,10 @@ def main(args):
     cfg.data._root_gulp_dir = os.getcwd()  # set default root gulp dir to prevent
     # exceptions on instantiating the EpicActionRecognitionSystem
 
+    cfg["test.features"] = args.features
+ 
     system = EpicActionRecognitionSystem(cfg)
+
     system.load_state_dict(ckpt["state_dict"])
     if not cfg.get("log_graph", True):
         system.example_input_array = None

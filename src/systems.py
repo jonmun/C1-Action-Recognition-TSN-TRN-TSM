@@ -5,6 +5,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Callable
 
 import pytorch_lightning as pl
 import torch
@@ -205,6 +206,18 @@ class EpicActionRecognitionSystem(pl.LightningModule):
                 cfg.data.preprocessing.input_size,
             )
         )
+        
+        if self.cfg["test.features"]:
+            feature_layer = getattr(self.model.base_model, "avgpool")
+            self.feature_hook = feature_layer.register_forward_hook(self.save_output_hook)
+
+
+    def save_output_hook(self, module, input, output) -> Callable:
+#        def hook(module, input, output):
+        output = output.view((-1, self.cfg.data.frame_count) + output.size()[1:])
+        output = torch.squeeze(output)
+        self.features = output
+        #return hook
 
     def configure_optimizers(self):
         cfg = self.cfg.learning
@@ -248,13 +261,18 @@ class EpicActionRecognitionSystem(pl.LightningModule):
         result = EvalResult()
         filename = self.cfg.get("test.results_path", "./predictions.pt")
 
-        result.write_dict(
-            {
+        results_dict = {
                 "verb_output": outputs["verb"],
                 "noun_output": outputs["noun"],
                 "narration_id": labels_dict["narration_id"],
                 "video_id": labels_dict["video_id"],
-            },
+        }
+
+        if self.cfg["test.features"]:
+            results_dict["features"] = self.features
+
+        result.write_dict(
+            results_dict,
             filename=filename,
         )
 
