@@ -85,7 +85,7 @@ def main(args):
     n_gpus = 1
     LOG.info(f"Overwriting number of GPUs to {n_gpus}")
     cfg.trainer.gpus = n_gpus
-    #cfg["test.results_path"] = str(args.results)
+    cfg["test.results_path"] = str(args.results)
 
     data_module = EpicActionRecogintionDataModule(cfg)
     if args.split == "train":
