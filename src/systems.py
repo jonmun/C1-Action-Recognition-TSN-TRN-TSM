@@ -149,11 +149,12 @@ class EpicActionRecogintionDataModule(pl.LightningDataModule):
             pin_memory=self.cfg.data.pin_memory,
         )
 
-    def test_dataloader(self):
+    def test_dataloader(self, gulp_dir):
         frame_count = self.cfg.data.get("test_frame_count", self.cfg.data.frame_count)
         LOG.info(f"Test dataset: frame count {frame_count}")
+        test_gulp_dir = Path(gulp_dir)
         dataset = TsnDataset(
-            self._get_video_dataset(self.test_gulp_dir),
+            self._get_video_dataset(test_gulp_dir),
             num_segments=frame_count,
             segment_length=self.cfg.data.segment_length,
             transform=self.test_transform,
@@ -206,8 +207,8 @@ class EpicActionRecognitionSystem(pl.LightningModule):
                 cfg.data.preprocessing.input_size,
             )
         )
-        
-        if self.cfg["test.features"]:
+       
+        if ("test.features" in self.cfg) and self.cfg["test.features"]:
             feature_layer = getattr(self.model.base_model, "avgpool")
             self.feature_hook = feature_layer.register_forward_hook(self.save_output_hook)
 
@@ -268,7 +269,7 @@ class EpicActionRecognitionSystem(pl.LightningModule):
                 "video_id": labels_dict["video_id"],
         }
 
-        if self.cfg["test.features"]:
+        if ("test.features" in self.cfg) and self.cfg["test.features"]:
             results_dict["features"] = self.features
 
         result.write_dict(

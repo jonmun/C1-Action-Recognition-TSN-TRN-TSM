@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("checkpoint", type=Path)
 parser.add_argument("results", type=Path)
-parser.add_argument("--split", choices=["val", "test"], default="test")
+parser.add_argument("--split", choices=["train", "val", "test"], default="test")
 parser.add_argument(
     "--n-frames",
     type=int,
@@ -85,17 +85,20 @@ def main(args):
     n_gpus = 1
     LOG.info(f"Overwriting number of GPUs to {n_gpus}")
     cfg.trainer.gpus = n_gpus
-    cfg["test.results_path"] = str(args.results)
+    #cfg["test.results_path"] = str(args.results)
 
     data_module = EpicActionRecogintionDataModule(cfg)
-    if args.split == "val":
-        dataloader = data_module.val_dataloader()
+    if args.split == "train":
+        dataloader = data_module.test_dataloader(cfg.data.train_gulp_dir)
+    elif args.split == "val":
+        dataloader = data_module.test_dataloader(cfg.data.val_gulp_dir)
     elif args.split == "test":
-        dataloader = data_module.test_dataloader()
+        dataloader = data_module.test_dataloader(cfg.data.test_gulp_dir) 
     else:
         raise ValueError(
             f"Split {args.split!r} is not a recognised dataset split to " f"test on."
         )
+ 
     trainer = Trainer(**cfg.trainer)
     trainer.test(system, test_dataloaders=dataloader)
 
