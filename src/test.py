@@ -61,9 +61,9 @@ def main(args):
     # exceptions
     cfg.data._root_gulp_dir = os.getcwd()  # set default root gulp dir to prevent
     # exceptions on instantiating the EpicActionRecognitionSystem
-
+    #cfg.data.frame_count = 16
     cfg["test.features"] = args.features
- 
+
     system = EpicActionRecognitionSystem(cfg)
 
     system.load_state_dict(ckpt["state_dict"])
