@@ -49,8 +49,10 @@ class TsnDataset(torch.utils.data.Dataset):
         self.transform = transform
         self.random_shift = random_shift
         self.test_mode = test_mode
+        self.drop_problematic_metadata = drop_problematic_metadata
         if drop_problematic_metadata:
-            self._drop_problematic_metadata()
+            self._find_problematic_metadata()
+
 
 
     def __getitem__(self, index):
@@ -75,6 +77,9 @@ class TsnDataset(torch.utils.data.Dataset):
         if self.transform is not None:
             images = self.transform(images)
         metadata = record.metadata
+        if self.drop_problematic_metadata:
+            for key in self.keys_to_drop:
+                metadata.pop(key, None)
         return images, metadata
 
     def _sample_indices(self, record: VideoRecord):
@@ -126,8 +131,8 @@ class TsnDataset(torch.utils.data.Dataset):
                     p += 1
         return seg_idxs
 
-    def _drop_problematic_metadata(self):
-        """Drops metadata whose value is a non-scalar value or ``None``"""
+    def _find_problematic_metadata(self):
+        """Finds metadatas whose value is a non-scalar value or ``None``"""
         def is_problematic_value(v: Any):
             if isinstance(v, (tuple, list)) or v is None:
                 return True
@@ -140,7 +145,8 @@ class TsnDataset(torch.utils.data.Dataset):
             if is_problematic_value(val)
         }
 
-        for i in range(len(self.dataset.video_records)):
-            for k in keys_to_drop:
-                self.dataset.video_records[i].metadata.pop(k)
+        self.keys_to_drop = keys_to_drop
+#        for i in range(len(self.dataset.video_records)):
+#            for k in keys_to_drop:
+#                del self.dataset.video_records[i].metadata[k]
  
