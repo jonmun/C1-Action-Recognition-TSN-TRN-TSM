@@ -209,15 +209,19 @@ class EpicActionRecognitionSystem(pl.LightningModule):
         )
        
         if ("test.features" in self.cfg) and self.cfg["test.features"]:
+            print(self.model.base_model)
             feature_layer = getattr(self.model.base_model, "avgpool")
             self.feature_hook = feature_layer.register_forward_hook(self.save_output_hook)
 
 
     def save_output_hook(self, module, input, output) -> Callable:
 #        def hook(module, input, output):
-        output = output.view((-1, self.cfg.data.frame_count) + output.size()[1:])
-        output = torch.squeeze(output)
-        self.features = output
+        frame_count = self.cfg.data.get("test_frame_count", self.cfg.data.frame_count) 
+        output = output.view((-1, frame_count) + output.size()[1:])
+        output = output.squeeze(-1)
+        output = output.squeeze(-1)
+        self.features = torch.mean(output, 1)
+        print(self.features.shape)
         #return hook
 
     def configure_optimizers(self):
@@ -258,19 +262,20 @@ class EpicActionRecognitionSystem(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         data, labels_dict = batch
         outputs = self.forward_tasks(data)
+        print(self.features.shape, outputs["verb"].shape, labels_dict["narration_id"])
+ 
 
         result = EvalResult()
         filename = self.cfg.get("test.results_path", "./predictions.pt")
-
         results_dict = {
-                "verb_output": outputs["verb"],
-                "noun_output": outputs["noun"],
+                "verb_output": outputs["verb"].cpu(),
+                "noun_output": outputs["noun"].cpu(),
                 "narration_id": labels_dict["narration_id"],
                 "video_id": labels_dict["video_id"],
         }
 
         if ("test.features" in self.cfg) and self.cfg["test.features"]:
-            results_dict["features"] = self.features
+            results_dict["features"] = self.features.cpu()
 
         result.write_dict(
             results_dict,
